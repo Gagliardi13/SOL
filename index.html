@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#120d0a" />
+  <title>Sol</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #120d0a;
+      --panel: #1d1612;
+      --line: #3a2c22;
+      --text: #f6ece2;
+      --muted: #b9a593;
+      --sun: #ffb347;
+      --sun-2: #ff7a45;
+      --ok: #7fd6a4;
+      --bad: #ff8a7a;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: Inter, system-ui, sans-serif; overflow: hidden; }
+    canvas { display: block; }
+
+    /* ---------- tela inicial ---------- */
+    #setup {
+      position: fixed; inset: 0; overflow-y: auto; z-index: 10;
+      background: radial-gradient(120% 70% at 50% -10%, #4a2a14 0%, var(--bg) 60%);
+      padding: 28px 16px 40px;
+    }
+    .wrap { max-width: 440px; margin: 0 auto; }
+    .sun {
+      width: 76px; height: 76px; border-radius: 50%; margin: 8px 0 18px;
+      background: radial-gradient(circle at 35% 35%, #ffe2a8, var(--sun) 45%, var(--sun-2) 100%);
+      box-shadow: 0 0 60px 10px rgba(255, 150, 60, .35);
+      animation: pulse 4s ease-in-out infinite;
+    }
+    @keyframes pulse { 50% { box-shadow: 0 0 80px 18px rgba(255, 150, 60, .5); transform: scale(1.04); } }
+    h1 { font-family: Fraunces, serif; font-weight: 700; font-size: 44px; margin: 0; letter-spacing: -.5px; }
+    .sub { color: var(--muted); margin: 6px 0 24px; line-height: 1.45; }
+    label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; font-weight: 500; }
+    input, select {
+      width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line);
+      background: var(--panel); color: var(--text); font: inherit; font-size: 16px; outline: none;
+    }
+    input:focus, select:focus { border-color: var(--sun); }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .btn {
+      display: block; width: 100%; margin-top: 14px; padding: 15px; border: 0; border-radius: 14px;
+      font: inherit; font-weight: 600; font-size: 16px; cursor: pointer; color: #2a1406;
+      background: linear-gradient(135deg, var(--sun), var(--sun-2));
+    }
+    .btn.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+    .btn:disabled { opacity: .45; cursor: default; }
+    .progress { height: 6px; border-radius: 6px; background: var(--panel); overflow: hidden; margin-top: 22px; }
+    .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--sun), var(--sun-2)); transition: width .2s; }
+    #setupStatus { font-size: 14px; margin-top: 10px; color: var(--muted); min-height: 20px; line-height: 1.4; }
+    #setupStatus.err { color: var(--bad); }
+    details { margin-top: 26px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+    summary { cursor: pointer; color: var(--text); }
+
+    /* ---------- interface durante a conversa ---------- */
+    #overlay { position: fixed; inset: 0; pointer-events: none; z-index: 5; display: none; }
+    #overlay.on { display: block; }
+    .top {
+      position: absolute; top: max(14px, env(safe-area-inset-top)); left: 16px; right: 16px;
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+    }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px;
+      background: rgba(18, 13, 10, .62); backdrop-filter: blur(8px); font-size: 14px; font-weight: 500;
+    }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
+    .dot.listening { background: var(--ok); animation: blinkdot 1s infinite; }
+    .dot.thinking { background: var(--sun); animation: blinkdot .5s infinite; }
+    .dot.speaking { background: var(--sun-2); }
+    @keyframes blinkdot { 50% { opacity: .35; } }
+    #hint {
+      position: absolute; left: 16px; right: 16px; top: 16%; text-align: center; font-size: 17px; font-weight: 500;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, .8);
+    }
+    #subs {
+      position: absolute; left: 16px; right: 16px; bottom: calc(96px + env(safe-area-inset-bottom));
+      text-align: center; font-size: 16px; line-height: 1.4;
+    }
+    #subs span { background: rgba(18, 13, 10, .66); padding: 4px 10px; border-radius: 8px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+    #subs .you { color: var(--muted); font-size: 14px; display: block; margin-bottom: 6px; }
+    .bar {
+      position: absolute; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom));
+      display: flex; gap: 10px; justify-content: center; pointer-events: auto;
+    }
+    .bar button {
+      flex: 1; max-width: 120px; padding: 13px 8px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .14);
+      background: rgba(18, 13, 10, .62); backdrop-filter: blur(8px); color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
+    }
+    .bar button.on { border-color: var(--sun); color: var(--sun); }
+    #toast {
+      position: absolute; left: 16px; right: 16px; top: 64px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(120, 30, 20, .85); font-size: 14px; display: none; pointer-events: auto;
+    }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+        "@pixiv/three-vrm": "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@3.5.5/lib/three-vrm.module.min.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="setup">
+    <div class="wrap">
+      <div class="sun"></div>
+      <h1>Sol</h1>
+      <p class="sub">Converse por voz com a Sol, no seu ambiente, em realidade aumentada.</p>
+
+      <label for="fWorker">Endereço do servidor (Cloudflare Worker)</label>
+      <input id="fWorker" type="url" placeholder="https://sol-voz.seu-usuario.workers.dev" autocomplete="off" />
+
+      <label for="fToken">Senha do app</label>
+      <input id="fToken" type="password" placeholder="a senha que você definiu no Worker" autocomplete="off" />
+
+      <label for="fName">Seu nome</label>
+      <input id="fName" type="text" placeholder="Como a Sol vai te chamar" autocomplete="off" />
+
+      <label for="fVoice">Voz</label>
+      <select id="fVoice">
+        <option value="marin">Marin (recomendada)</option>
+        <option value="coral">Coral</option>
+        <option value="shimmer">Shimmer</option>
+        <option value="sage">Sage</option>
+      </select>
+      <div class="hint">Os dados ficam salvos só neste aparelho.</div>
+
+      <div class="progress"><div id="bar"></div></div>
+      <div id="setupStatus">Carregando a Sol…</div>
+
+      <button class="btn" id="btnConnect" disabled>1. Conectar voz</button>
+      <button class="btn" id="btnAR" disabled>2. Entrar em realidade aumentada</button>
+      <button class="btn ghost" id="btnPreview" disabled>Testar sem AR (prévia)</button>
+
+      <details>
+        <summary>Dicas</summary>
+        Use fone de ouvido: a conversa e as interrupções ficam bem mais naturais.<br />
+        No AR, aponte a câmera para o chão, mexa o celular devagar até aparecer o anel, e toque na tela para a Sol aparecer.<br />
+        Pode interromper a Sol a qualquer momento, é só falar.
+      </details>
+    </div>
+  </div>
+
+  <div id="overlay">
+    <div class="top">
+      <div class="pill"><span class="dot" id="dot"></span><span id="state">Conectando…</span></div>
+    </div>
+    <div id="toast"></div>
+    <div id="hint"></div>
+    <div id="subs"></div>
+    <div class="bar">
+      <button id="bMove">Mover</button>
+      <button id="bMute">Mudo</button>
+      <button id="bSubs" class="on">Legendas</button>
+      <button id="bExit">Sair</button>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
