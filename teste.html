@@ -23,6 +23,7 @@
   <button data-cfg="B">B · sem sobreposição de tela</button>
   <button data-cfg="C">C · sem antisserrilhado e escala normal</button>
   <button data-cfg="D">D · tudo no mínimo</button>
+  <button data-cfg="E">E · modo clássico (correção)</button>
   <div id="log"></div>
   <div id="ov"><div id="info"></div><button id="sair">Sair</button></div>
 
@@ -33,6 +34,7 @@
       B: { overlay: false, aa: true, scale: 0.85 },
       C: { overlay: true, aa: false, scale: 1 },
       D: { overlay: false, aa: false, scale: 1 },
+      E: { overlay: true, aa: true, scale: 0.85, classic: true },
     };
     const log = (m) => (document.getElementById('log').innerHTML += m + '<br>');
     window.onerror = (m) => log('ERRO: ' + m);
@@ -41,6 +43,7 @@
 
     async function start(name) {
       const cfg = CFG[name];
+      if (cfg.classic && window.XRWebGLBinding) { try { delete XRWebGLBinding.prototype.createProjectionLayer; } catch {} }
       const renderer = new THREE.WebGLRenderer({ antialias: cfg.aa, alpha: true });
       renderer.setSize(innerWidth, innerHeight);
       renderer.xr.enabled = true;
@@ -90,7 +93,7 @@
           const gl = renderer.getContext();
           const layer = session.renderState.baseLayer;
           document.getElementById('info').textContent =
-            `${name} quadros ${frames} chão ${hits} | layer ${layer ? layer.framebufferWidth + 'x' + layer.framebufferHeight : 'nenhum'} | blend ${session.environmentBlendMode} | glErr ${gl.getError()}`;
+            `${name} quadros ${frames} chão ${hits} | ${layer ? 'classico ' + layer.framebufferWidth + 'x' + layer.framebufferHeight : 'layers'} | blend ${session.environmentBlendMode} | glErr ${gl.getError()}`;
         }
       });
       session.addEventListener('end', () => {

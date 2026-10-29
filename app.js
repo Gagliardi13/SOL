@@ -7,6 +7,14 @@ import { PERSONA, SAUDACAO, preencher } from './persona.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Correção para celulares Android: o three.js usa por padrão o modo "WebXR Layers"
+// quando o navegador anuncia suporte, mas em vários aparelhos esse modo não mostra
+// nada na tela. Removendo o anúncio, ele volta ao modo clássico (XRWebGLLayer),
+// que funciona em todos. Para testar o modo novo: adicione ?layers=1 ao endereço.
+if (!new URLSearchParams(location.search).has('layers') && window.XRWebGLBinding) {
+  try { delete XRWebGLBinding.prototype.createProjectionLayer; } catch {}
+}
+
 // ---------- configurações salvas no aparelho ----------
 const store = {
   get(k, d = '') { try { return localStorage.getItem('sol.' + k) ?? d; } catch { return d; } },
