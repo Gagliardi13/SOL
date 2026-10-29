@@ -40,7 +40,8 @@ A sua chave da OpenAI fica **só** no Cloudflare. O celular recebe um acesso que
 
 1. Em **github.com**, clique em **New repository**. Nome: `sol`. Marque **Public**. Crie.
 2. Clique em **uploading an existing file** e arraste estes arquivos:
-   `index.html`, `app.js`, `avatar.js`, `voice.js`, `persona.js`, `sol.vrm`
+   `index.html`, `app.js`, `avatar.js`, `anim.js`, `voice.js`, `emotion.js`, `persona.js`,
+   `sol.vrm`, `animacoes.json`, `animacoes.bin` (e, se quiser, `teste.html`)
    (o `worker.js` e este LEIA-ME não precisam ir, mas não tem problema se forem.)
 3. **Commit changes**.
 4. **Settings → Pages → Build and deployment**: Source = *Deploy from a branch*, Branch = `main` e pasta `/ (root)`. **Save**.
@@ -58,7 +59,9 @@ abra o site no Chrome, preencha os campos, clique em **1. Conectar voz**, permit
 4. Aponte para o chão e mova o celular devagar. Quando aparecer o anel laranja, toque na tela. A Sol aparece e te cumprimenta.
 5. É só conversar. Pode interromper ela a qualquer momento.
 
-Botões na tela: **Mover** (reposiciona ela), **Mudo** (desliga seu microfone), **Legendas**, **Sair**.
+Botões na tela: **Andar** (aponte para o chão e toque: ela caminha até lá), **Mover** (reposiciona ela na hora), **Mudo** (desliga seu microfone), **Legendas**, **Sair**.
+
+A linha pequena no alto mostra `fps` (quadros por segundo), se ela está `ancorada` no chão, e qualquer erro.
 
 > Use fone de ouvido. Sem fone, o microfone pode captar a voz dela e ela "se interromper".
 
@@ -77,6 +80,14 @@ Botões na tela: **Mover** (reposiciona ela), **Mudo** (desliga seu microfone), 
 | Ela aparece mas não ouve | Microfone negado: Chrome → cadeado ao lado do endereço → permissões |
 | AR não abre | Atualize o Chrome e o "Google Play Services for AR" |
 | Travando no celular | Feche outros apps; o modelo 3D tem 10 MB e o Redmi é mais limitado |
+| Aviso "Emoções desativadas" | O Worker não tem a rota nova (cole o `worker.js` atualizado) ou o modelo de emoções não existe: crie `EMO_MODEL` no Worker (ex.: `gpt-5.4-nano`) |
+| Nada 3D aparece no AR | Confirme que o `app.js` é o atual (tem a correção do modo de desenho) |
+
+## Atualizando para uma versão nova
+
+1. **GitHub:** Add file → Upload files → arraste os arquivos novos (substituem os antigos) → Commit.
+2. **Cloudflare** (só quando o `worker.js` mudar): abra o Worker → **Edit code** → apague tudo → cole o `worker.js` novo → **Deploy**. As variáveis continuam lá.
+3. No celular, feche a aba e abra de novo.
 
 ## Ajustes
 
@@ -87,4 +98,5 @@ Botões na tela: **Mover** (reposiciona ela), **Mudo** (desliga seu microfone), 
 ## Créditos
 
 Modelo 3D: amostra oficial da pixiv (VRoid), © 2022 pixiv Inc., licença VRM 1.0 que permite uso, modificação e redistribuição.
+Animações: Mixamo (Adobe), convertidas para o esqueleto da Sol (`animacoes.bin`). O uso em projetos é livre; não redistribua os arquivos originais do Mixamo.
 Bibliotecas: three.js e @pixiv/three-vrm.

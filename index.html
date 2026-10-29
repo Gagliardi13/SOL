@@ -87,13 +87,15 @@
     #subs span { background: rgba(18, 13, 10, .66); padding: 4px 10px; border-radius: 8px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
     #subs .you { color: var(--muted); font-size: 14px; display: block; margin-bottom: 6px; }
     .bar {
-      position: absolute; left: 16px; right: 16px; bottom: max(18px, env(safe-area-inset-bottom));
-      display: flex; gap: 10px; justify-content: center; pointer-events: auto;
+      position: absolute; left: 10px; right: 10px; bottom: max(18px, env(safe-area-inset-bottom));
+      display: flex; gap: 6px; justify-content: center; pointer-events: auto;
     }
     .bar button {
-      flex: 1; max-width: 120px; padding: 13px 8px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .14);
+      flex: 1; max-width: 110px; padding: 13px 4px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, .14);
       background: rgba(18, 13, 10, .62); backdrop-filter: blur(8px); color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
     }
+    label.check { display: flex; gap: 10px; align-items: flex-start; color: var(--text); font-size: 14px; line-height: 1.4; margin-top: 16px; }
+    label.check input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--sun); }
     .bar button.on { border-color: var(--sun); color: var(--sun); }
     #bFront {
       position: absolute; left: 50%; top: 32%; transform: translateX(-50%); pointer-events: auto;
@@ -142,6 +144,7 @@
         <option value="shimmer">Shimmer</option>
         <option value="sage">Sage</option>
       </select>
+      <label class="check"><input type="checkbox" id="fFone" /> Estou de fone de ouvido (ativa o som 3D: a voz sai de onde ela está)</label>
       <div class="hint">Os dados ficam salvos só neste aparelho.</div>
 
       <div class="progress"><div id="bar"></div></div>
@@ -155,7 +158,8 @@
         <summary>Dicas</summary>
         Use fone de ouvido: a conversa e as interrupções ficam bem mais naturais.<br />
         No AR, aponte a câmera para o chão, mexa o celular devagar até aparecer o anel, e toque na tela para a Sol aparecer.<br />
-        Pode interromper a Sol a qualquer momento, é só falar.
+        Pode interromper a Sol a qualquer momento, é só falar.<br />
+        Botão <b>Andar</b>: aponte para um lugar no chão e toque; ela caminha até lá.
       </details>
     </div>
   </div>
@@ -170,6 +174,7 @@
     <button id="bFront" style="display:none">Colocar a Sol na minha frente</button>
     <div id="subs"></div>
     <div class="bar">
+      <button id="bWalk">Andar</button>
       <button id="bMove">Mover</button>
       <button id="bMute">Mudo</button>
       <button id="bSubs" class="on">Legendas</button>

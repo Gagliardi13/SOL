@@ -3,8 +3,9 @@
 const OPENAI_CALLS = 'https://api.openai.com/v1/realtime/calls';
 
 export class VoiceLink extends EventTarget {
-  constructor({ workerUrl, appToken, voice }) {
+  constructor({ workerUrl, appToken, voice, spatial = false }) {
     super();
+    this.spatial = spatial; // som 3D: a voz sai da posição dela (recomendado só com fone)
     this.workerUrl = workerUrl.replace(/\/+$/, '');
     this.appToken = appToken;
     this.voice = voice;
@@ -152,6 +153,9 @@ export class VoiceLink extends EventTarget {
       case 'response.output_audio_transcript.done':
         this._emit('sol-text-done', ev.transcript || '');
         break;
+      case 'conversation.item.input_audio_transcription.delta':
+        this._emit('user-text-delta', ev.delta || '');
+        break;
       case 'conversation.item.input_audio_transcription.completed':
         this._emit('user-text', ev.transcript || '');
         break;
@@ -167,9 +171,31 @@ export class VoiceLink extends EventTarget {
     const an = (this.analyser = this.audioCtx.createAnalyser());
     an.fftSize = 1024;
     an.smoothingTimeConstant = 0.35;
-    src.connect(an); // não conecta na saída: o som já sai pelo elemento <audio>
+    src.connect(an);
+    if (this.spatial) {
+      // som 3D: o áudio sai pelo WebAudio com posição; o <audio> fica mudo só para manter o fluxo ativo
+      this.panner = new PannerNode(this.audioCtx, {
+        panningModel: 'HRTF', distanceModel: 'inverse', refDistance: 1, rolloffFactor: 0.5,
+      });
+      src.connect(this.panner).connect(this.audioCtx.destination);
+      this.audioEl.muted = true;
+    }
     this.timeBuf = new Float32Array(an.fftSize);
     this.freqBuf = new Uint8Array(an.frequencyBinCount);
+  }
+
+  // som 3D: posição de quem ouve (câmera) e de onde vem a voz (boca dela)
+  setSpatial(listenerPos, forward, up, sourcePos) {
+    if (!this.panner) return;
+    const L = this.audioCtx.listener, t = this.audioCtx.currentTime;
+    if (L.positionX) {
+      L.positionX.setValueAtTime(listenerPos.x, t); L.positionY.setValueAtTime(listenerPos.y, t); L.positionZ.setValueAtTime(listenerPos.z, t);
+      L.forwardX.setValueAtTime(forward.x, t); L.forwardY.setValueAtTime(forward.y, t); L.forwardZ.setValueAtTime(forward.z, t);
+      L.upX.setValueAtTime(up.x, t); L.upY.setValueAtTime(up.y, t); L.upZ.setValueAtTime(up.z, t);
+    }
+    this.panner.positionX.setValueAtTime(sourcePos.x, t);
+    this.panner.positionY.setValueAtTime(sourcePos.y, t);
+    this.panner.positionZ.setValueAtTime(sourcePos.z, t);
   }
 
   // chamado a cada frame: calcula volume e formato aproximado da boca
