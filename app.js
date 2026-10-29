@@ -211,13 +211,30 @@ $('btnAR').onclick = async () => {
 
 function onSelect() {
   if (!placing || !reticle.visible) return;
-  const p = new THREE.Vector3().setFromMatrixPosition(reticle.matrix);
+  placeAt(new THREE.Vector3().setFromMatrixPosition(reticle.matrix));
+}
+
+function placeAt(p) {
   getCameraPos();
   avatar.placeAt(p, camPos);
   placing = false;
   reticle.visible = false;
   $('hint').textContent = '';
+  $('bFront').style.display = 'none';
   afterPlaced();
+}
+
+// plano B: se o chão não for detectado, coloca a Sol 1,4 m à sua frente,
+// estimando o chão ~1,45 m abaixo do celular
+function placeInFront() {
+  if (!placing) return;
+  const cam = renderer.xr.getCamera();
+  getCameraPos();
+  const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.getWorldQuaternion(new THREE.Quaternion()));
+  fwd.y = 0;
+  if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
+  fwd.normalize().multiplyScalar(1.4);
+  placeAt(new THREE.Vector3(camPos.x + fwd.x, camPos.y - 1.45, camPos.z + fwd.z));
 }
 
 function onARend() {
@@ -226,9 +243,28 @@ function onARend() {
   leaveConversation();
 }
 
+let placingSince = 0;
+let floorFound = false;
 function startPlacing() {
   placing = true;
-  $('hint').textContent = 'Aponte para o chão e mova o celular devagar. Quando o anel aparecer, toque na tela.';
+  placingSince = performance.now();
+  floorFound = false;
+  $('bFront').style.display = 'none';
+  $('hint').textContent = 'Aponte para o chão a uns 2 metros e mova o celular devagar, de um lado para o outro.';
+}
+
+// mensagens enquanto procura o chão + botão do plano B
+function updatePlacingHint(hasHit) {
+  const secs = (performance.now() - placingSince) / 1000;
+  if (hasHit) {
+    if (!floorFound) $('hint').textContent = 'Chão encontrado! Toque na tela onde o anel está.';
+    floorFound = true;
+  } else if (floorFound) {
+    $('hint').textContent = 'Perdi o chão de vista. Aponte de novo para onde estava o anel.';
+  } else if (secs > 4) {
+    $('hint').textContent = `Procurando o chão… (${Math.floor(secs)}s) Precisa de luz e de um piso com textura. Mova o celular devagar.`;
+  }
+  if (secs > 6) $('bFront').style.display = '';
 }
 
 // ---------- prévia sem AR (funciona no PC também) ----------
@@ -286,6 +322,8 @@ function leaveConversation() {
 // impede que tocar num botão também conte como "toque no AR"
 document.querySelector('.bar').addEventListener('beforexrselect', (e) => e.preventDefault());
 $('bMove').onclick = () => startPlacing();
+$('bFront').onclick = () => placeInFront();
+$('bFront').addEventListener('beforexrselect', (e) => e.preventDefault());
 $('bMute').onclick = () => {
   muted = !muted;
   voice?.setMicEnabled(!muted);
@@ -316,11 +354,12 @@ renderer.setAnimationLoop((time, frame) => {
   if (frame && hitSource && placing) {
     const ref = renderer.xr.getReferenceSpace();
     const hits = frame.getHitTestResults(hitSource);
-    if (hits.length) {
-      const pose = hits[0].getPose(ref);
+    const pose = hits.length ? hits[0].getPose(ref) : null;
+    if (pose) {
       reticle.visible = true;
       reticle.matrix.fromArray(pose.transform.matrix);
     } else reticle.visible = false;
+    updatePlacingHint(!!pose);
   }
 
   controls?.update();

@@ -95,6 +95,11 @@
       background: rgba(18, 13, 10, .62); backdrop-filter: blur(8px); color: var(--text); font: inherit; font-size: 14px; font-weight: 500;
     }
     .bar button.on { border-color: var(--sun); color: var(--sun); }
+    #bFront {
+      position: absolute; left: 50%; top: 32%; transform: translateX(-50%); pointer-events: auto;
+      padding: 13px 18px; border-radius: 14px; border: 0; font: inherit; font-weight: 600; font-size: 15px;
+      color: #2a1406; background: linear-gradient(135deg, var(--sun), var(--sun-2));
+    }
     #toast {
       position: absolute; left: 16px; right: 16px; top: 64px; padding: 12px 14px; border-radius: 12px;
       background: rgba(120, 30, 20, .85); font-size: 14px; display: none; pointer-events: auto;
@@ -157,6 +162,7 @@
     </div>
     <div id="toast"></div>
     <div id="hint"></div>
+    <button id="bFront" style="display:none">Colocar a Sol na minha frente</button>
     <div id="subs"></div>
     <div class="bar">
       <button id="bMove">Mover</button>
