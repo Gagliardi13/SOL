@@ -1,7 +1,6 @@
 // Sol: junta tudo (cena 3D, realidade aumentada, voz e interface).
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { XREstimatedLight } from 'three/addons/webxr/XREstimatedLight.js';
 import { loadAvatar } from './avatar.js';
 import { VoiceLink, guessEmotion } from './voice.js';
 import { PERSONA, SAUDACAO, preencher } from './persona.js';
@@ -36,18 +35,18 @@ const sunLight = new THREE.DirectionalLight(0xffffff, 1.6);
 sunLight.position.set(0.6, 2.5, 1.5);
 scene.add(hemi, sunLight);
 
-// luz estimada do ambiente real (quando o aparelho oferece)
-const xrLight = new XREstimatedLight(renderer);
-xrLight.addEventListener('estimationstart', () => {
-  scene.add(xrLight);
-  scene.remove(hemi, sunLight);
-  if (xrLight.environment) scene.environment = xrLight.environment;
-});
-xrLight.addEventListener('estimationend', () => {
-  scene.remove(xrLight);
-  scene.add(hemi, sunLight);
-  scene.environment = null;
-});
+// ---------- diagnóstico: mostra na tela qualquer erro (o celular não tem console) ----------
+const diag = { frames: 0, hits: 0, err: '' };
+function reportError(where, e) {
+  const msg = `${where}: ${e && e.message ? e.message : e}`;
+  if (diag.err === msg) return;
+  diag.err = msg;
+  console.error(where, e);
+  const el = $('diag');
+  if (el) el.textContent = 'ERRO ' + msg;
+}
+window.addEventListener('error', (e) => reportError('erro', e.error || e.message));
+window.addEventListener('unhandledrejection', (e) => reportError('promessa', e.reason));
 
 // anel que mostra onde ela vai aparecer
 const reticle = new THREE.Mesh(
@@ -192,7 +191,7 @@ $('btnAR').onclick = async () => {
   try {
     const session = await navigator.xr.requestSession('immersive-ar', {
       requiredFeatures: ['hit-test'],
-      optionalFeatures: ['dom-overlay', 'light-estimation'],
+      optionalFeatures: ['dom-overlay'],
       domOverlay: { root: $('overlay') },
     });
     renderer.xr.setReferenceSpaceType('local');
@@ -350,22 +349,35 @@ function getCameraPos() {
 
 renderer.setAnimationLoop((time, frame) => {
   const dt = clock.getDelta();
+  try {
+    if (frame && hitSource && placing) {
+      const ref = renderer.xr.getReferenceSpace();
+      const hits = frame.getHitTestResults(hitSource);
+      const pose = hits.length ? hits[0].getPose(ref) : null;
+      if (pose) {
+        reticle.visible = true;
+        reticle.matrix.fromArray(pose.transform.matrix);
+      } else reticle.visible = false;
+      if (pose) diag.hits++;
+      updatePlacingHint(!!pose);
+    }
 
-  if (frame && hitSource && placing) {
-    const ref = renderer.xr.getReferenceSpace();
-    const hits = frame.getHitTestResults(hitSource);
-    const pose = hits.length ? hits[0].getPose(ref) : null;
-    if (pose) {
-      reticle.visible = true;
-      reticle.matrix.fromArray(pose.transform.matrix);
-    } else reticle.visible = false;
-    updatePlacingHint(!!pose);
+    controls?.update();
+    voice?.tick();
+    if (avatar && avatar.root.visible) avatar.update(dt, getCameraPos(), voice);
+  } catch (e) {
+    reportError('animação', e);
   }
-
-  controls?.update();
-  voice?.tick();
-  if (avatar && avatar.root.visible) avatar.update(dt, getCameraPos(), voice);
-  renderer.render(scene, camera);
+  try {
+    renderer.render(scene, camera);
+    diag.frames++;
+  } catch (e) {
+    reportError('desenho', e);
+  }
+  if (mode === 'ar' && diag.frames % 30 === 0 && !diag.err) {
+    const el = $('diag');
+    if (el) el.textContent = `quadros ${diag.frames} · chão ${diag.hits} · Sol ${avatar && avatar.root.visible ? 'visível' : 'oculta'}`;
+  }
 });
 
 window.addEventListener('resize', () => {

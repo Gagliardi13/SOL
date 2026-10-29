@@ -100,6 +100,10 @@
       padding: 13px 18px; border-radius: 14px; border: 0; font: inherit; font-weight: 600; font-size: 15px;
       color: #2a1406; background: linear-gradient(135deg, var(--sun), var(--sun-2));
     }
+    #diag {
+      position: absolute; left: 16px; right: 16px; top: calc(56px + env(safe-area-inset-top)); font-size: 11px;
+      color: #ffd9b0; text-shadow: 0 1px 4px #000; font-family: ui-monospace, monospace; word-break: break-word;
+    }
     #toast {
       position: absolute; left: 16px; right: 16px; top: 64px; padding: 12px 14px; border-radius: 12px;
       background: rgba(120, 30, 20, .85); font-size: 14px; display: none; pointer-events: auto;
@@ -160,6 +164,7 @@
     <div class="top">
       <div class="pill"><span class="dot" id="dot"></span><span id="state">Conectando…</span></div>
     </div>
+    <div id="diag"></div>
     <div id="toast"></div>
     <div id="hint"></div>
     <button id="bFront" style="display:none">Colocar a Sol na minha frente</button>
