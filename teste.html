@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste AR</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; background: #111; color: #eee; padding: 16px; }
+    button { display: block; width: 100%; margin: 10px 0; padding: 14px; font-size: 16px; border-radius: 10px; border: 0; background: #ffb347; color: #222; font-weight: 600; }
+    #ov { position: fixed; inset: 0; pointer-events: none; display: none; }
+    #ov.on { display: block; }
+    #info { position: absolute; top: 12px; left: 12px; right: 12px; font: 13px monospace; color: #fff; text-shadow: 0 1px 3px #000; }
+    #sair { position: absolute; bottom: 20px; left: 20px; right: 20px; width: auto; pointer-events: auto; }
+  </style>
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js" } }
+  </script>
+</head>
+<body>
+  <h2>Teste de AR</h2>
+  <p>Cada botão abre o AR de um jeito diferente. Em cada um, veja se aparece um <b>cubo rosa</b> à sua frente e o <b>anel laranja</b> no chão.</p>
+  <button data-cfg="A">A · igual ao app</button>
+  <button data-cfg="B">B · sem sobreposição de tela</button>
+  <button data-cfg="C">C · sem antisserrilhado e escala normal</button>
+  <button data-cfg="D">D · tudo no mínimo</button>
+  <div id="log"></div>
+  <div id="ov"><div id="info"></div><button id="sair">Sair</button></div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    const CFG = {
+      A: { overlay: true, aa: true, scale: 0.85 },
+      B: { overlay: false, aa: true, scale: 0.85 },
+      C: { overlay: true, aa: false, scale: 1 },
+      D: { overlay: false, aa: false, scale: 1 },
+    };
+    const log = (m) => (document.getElementById('log').innerHTML += m + '<br>');
+    window.onerror = (m) => log('ERRO: ' + m);
+
+    for (const b of document.querySelectorAll('[data-cfg]')) b.onclick = () => start(b.dataset.cfg);
+
+    async function start(name) {
+      const cfg = CFG[name];
+      const renderer = new THREE.WebGLRenderer({ antialias: cfg.aa, alpha: true });
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.xr.enabled = true;
+      if (cfg.scale !== 1) renderer.xr.setFramebufferScaleFactor(cfg.scale);
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 20);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 3));
+      const cube = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshStandardMaterial({ color: 0xff3fa4 }));
+      cube.position.set(0, 0, -0.8); // 80 cm à frente de onde o AR começa
+      scene.add(cube);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.12, 0.16, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffb347 }));
+      ring.matrixAutoUpdate = false;
+      ring.visible = false;
+      scene.add(ring);
+
+      const opts = { requiredFeatures: ['hit-test'] };
+      if (cfg.overlay) {
+        opts.optionalFeatures = ['dom-overlay'];
+        opts.domOverlay = { root: document.getElementById('ov') };
+      }
+      let session;
+      try {
+        session = await navigator.xr.requestSession('immersive-ar', opts);
+      } catch (e) {
+        return log(name + ': não abriu o AR: ' + e.message);
+      }
+      document.getElementById('ov').classList.add('on');
+      document.getElementById('sair').onclick = () => session.end();
+      renderer.xr.setReferenceSpaceType('local');
+      await renderer.xr.setSession(session);
+      const hitSource = await session.requestHitTestSource({ space: await session.requestReferenceSpace('viewer') });
+
+      let frames = 0, hits = 0;
+      renderer.setAnimationLoop((t, frame) => {
+        cube.rotation.y += 0.02;
+        if (frame) {
+          const res = frame.getHitTestResults(hitSource);
+          const pose = res.length ? res[0].getPose(renderer.xr.getReferenceSpace()) : null;
+          ring.visible = !!pose;
+          if (pose) { hits++; ring.matrix.fromArray(pose.transform.matrix); }
+        }
+        renderer.render(scene, camera);
+        frames++;
+        if (frames % 30 === 0) {
+          const gl = renderer.getContext();
+          const layer = session.renderState.baseLayer;
+          document.getElementById('info').textContent =
+            `${name} quadros ${frames} chão ${hits} | layer ${layer ? layer.framebufferWidth + 'x' + layer.framebufferHeight : 'nenhum'} | blend ${session.environmentBlendMode} | glErr ${gl.getError()}`;
+        }
+      });
+      session.addEventListener('end', () => {
+        renderer.setAnimationLoop(null);
+        renderer.dispose();
+        renderer.domElement.remove();
+        document.getElementById('ov').classList.remove('on');
+        log(`${name}: ${frames} quadros, chão ${hits}`);
+      });
+    }
+  </script>
+</body>
+</html>
